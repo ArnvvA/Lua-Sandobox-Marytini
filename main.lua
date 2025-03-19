@@ -3,27 +3,6 @@ local screen_height = love.graphics.getHeight()
 
 local card_sprite
 
--- local card= {
---     dragging = false,
---     transform = {
---         x = (screen_width - 126) / 2,
---         y = (screen_height - 176) / 2,
---         width = 126,
---         height = 176
---     },
---     target_transform = {
---         x = (screen_width - 126) / 2,
---         y = (screen_height - 176) / 2,
---         width = 126,
---         height = 176
---     },
---     velocity = {
---         x = 0,
---         y = 0
---     }
--- }
-
-
 local deck = {
     cards = {},
     transform = {
@@ -109,6 +88,14 @@ end
 
 function love.draw()
     love.graphics.clear(0.2,0.3,0.4)
+
+    love.graphics.circle(
+        "fill",
+        deck.transform.x + deck.transform.width / 2,
+        deck.transform.y + deck.transform.height + 50,
+        15
+    )
+    
     for _, card in ipairs(deck.cards) do
         love.graphics.draw(card_sprite, card.transform.x, card.transform.y)
     end
