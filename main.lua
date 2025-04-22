@@ -19,7 +19,7 @@ function Drink:scoreAgainst(target)
         totalDiff = totalDiff + math.abs(self[attr] - target[attr])
     end
 
-    local score = 100 - totalDiff * 25
+    local score = ((8 - totalDiff) * multiplier) * 10
     return math.max(score, 0)
 end
 
@@ -42,6 +42,15 @@ end
 
 
 function love.load()
+
+    images = {
+        Saltiness = love.graphics.newImage("salt.png"),
+        Bitterness = love.graphics.newImage("bitter.png"),
+        Sweetness = love.graphics.newImage("sweet.png"),
+        Sourness = love.graphics.newImage("sour.png")
+    }
+
+    
     attributes = {"Saltiness","Bitterness", "Sweetness", "Sourness"}
     values = {1, 2, 3} -- Low, Medium, High
 
@@ -84,6 +93,7 @@ end
 
 targetDrink = generateRandomTarget()
 lastScore = nil
+totalScore = 0
 targetScore = 60 -- Minimum score needed to pass (you can adjust this)
 triesLeft = 4
 multiplier = 1
@@ -94,6 +104,8 @@ end
 
 
 function love.draw()
+    love.graphics.clear(0.2,0.3,0.4)
+
     -- Draw buttons
     for _, button in ipairs(buttons) do
         love.graphics.rectangle("line", button.x, button.y, button.width, button.height)
@@ -102,9 +114,11 @@ function love.draw()
 
     -- Draw labels for each attribute next to buttons
     for i, attr in ipairs(attributes) do
-        local labelY = buttons[(i-1)*3 + 1].y + 10
-        love.graphics.printf(attr, 0, labelY, buttons[1].x - 20, "right")
+        local img = images[attr]
+        local imgY = buttons[(i-1)*3 + 1].y
+        love.graphics.draw(img, buttons[1].x - img:getWidth() - 20, imgY, 0, 0.5, 0.5)
     end
+
 
     -- 🛠️ Draw Current Drink using attributes (fixed order)
     love.graphics.print("Current Drink:", 50, 30)
@@ -124,6 +138,7 @@ function love.draw()
     if lastScore ~= nil then
         love.graphics.print("Last Score: " .. lastScore, 50, 200)
     end
+    love.graphics.print("Total Score: " .. totalScore, 50, 220)
 
     love.graphics.print("Tries Left: " .. triesLeft, 50, 250)
     love.graphics.print("Multiplier: " .. multiplier, 50, 270)
@@ -170,6 +185,7 @@ function serveDrink()
     -- Calculate base score
     local rawScore = playerDrink:scoreAgainst(targetDrink)
     lastScore = rawScore * multiplier
+    totalScore = totalScore + lastScore
 
     print("Drink served!")
     print("Raw Score:", rawScore)
@@ -194,6 +210,7 @@ function serveDrink()
         -- Move to next target
         targetDrink = generateRandomTarget()
         triesLeft = 4 -- Reset tries
+        multiplier = multiplier - 1
     else
         triesLeft = triesLeft - 1
         if triesLeft == 0 then
