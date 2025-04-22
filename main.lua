@@ -42,6 +42,7 @@ end
 
 
 function love.load()
+    love.window.setMode(1600, 900)
 
     images = {
         Saltiness = love.graphics.newImage("salt.png"),
@@ -54,31 +55,44 @@ function love.load()
     attributes = {"Saltiness","Bitterness", "Sweetness", "Sourness"}
     values = {1, 2, 3} -- Low, Medium, High
 
-    buttons = {}
-    drink = {}
-    for _, attr in ipairs(attributes) do
-        drink[attr] = 0 -- initialize all to 0
-    end
-
-    -- Layout
+    -- Layout for side-by-side images and buttons to the right of each image
     local buttonWidth = 80
     local buttonHeight = 40
-    local spacingX = 10
-    local spacingY = 20
-    local startX = (love.graphics.getWidth() - (buttonWidth * 3 + spacingX * 2)) / 2
-    local startY = love.graphics.getHeight() - (buttonHeight * #attributes + spacingY * (#attributes - 1)) - 100
+    local spacingX = 120 -- Increased spacing to prevent overlap
+    local imageScale = 0.333
+    local imageWidth = images[attributes[1]]:getWidth() * imageScale
+    local imageHeight = images[attributes[1]]:getHeight() * imageScale
+    local totalWidth = (#attributes * (imageWidth + buttonWidth)) + ((#attributes - 1) * spacingX)
+    local startX = (love.graphics.getWidth() - totalWidth) / 2
+    local imageY = 220
 
+    buttons = {}
+    drink = {}
     for i, attr in ipairs(attributes) do
+        drink[attr] = 0 -- initialize all to 0
+        local colX = startX + (i-1)*(imageWidth + buttonWidth + spacingX)
+        -- Image position
+        local imgX = colX
+        local imgY = imageY
+        -- Button column position (right next to image)
+        local btnColX = imgX + imageWidth + 56
+        local btnColYBottom = imgY + imageHeight - 30
+        local btnColYTop = imgY
+        local btnSpacingY = (btnColYBottom - btnColYTop - (#values * buttonHeight)) / (#values - 1)
         for j, val in ipairs(values) do
+            local btnY = btnColYBottom - j * buttonHeight
             table.insert(buttons, {
-                x = startX + (j-1)*(buttonWidth + spacingX),
-                y = startY + (i-1)*(buttonHeight + spacingY),
+                x = btnColX,
+                y = btnY,
                 width = buttonWidth,
                 height = buttonHeight,
                 attribute = attr,
                 value = val
             })
         end
+        -- Store image position for drawing
+        if not imagePositions then imagePositions = {} end
+        imagePositions[attr] = {x = imgX, y = imgY}
     end
 
     -- Serve button
@@ -106,21 +120,21 @@ end
 function love.draw()
     love.graphics.clear(0.2,0.3,0.4)
 
-    -- Draw buttons
+    -- Draw attribute images side by side with button columns to the right
+    local imageScale = 0.5
+    for i, attr in ipairs(attributes) do
+        local img = images[attr]
+        local pos = imagePositions[attr]
+        love.graphics.draw(img, pos.x, pos.y, 0, imageScale, imageScale)
+    end
+
+    -- Draw buttons in columns next to each image
     for _, button in ipairs(buttons) do
         love.graphics.rectangle("line", button.x, button.y, button.width, button.height)
         love.graphics.printf(button.value, button.x, button.y + 10, button.width, "center")
     end
 
-    -- Draw labels for each attribute next to buttons
-    for i, attr in ipairs(attributes) do
-        local img = images[attr]
-        local imgY = buttons[(i-1)*3 + 1].y
-        love.graphics.draw(img, buttons[1].x - img:getWidth() - 20, imgY, 0, 0.5, 0.5)
-    end
-
-
-    -- 🛠️ Draw Current Drink using attributes (fixed order)
+    -- Draw Current Drink using attributes (fixed order)
     love.graphics.print("Current Drink:", 50, 30)
     local offsetY = 50
     for i, attr in ipairs(attributes) do
@@ -139,7 +153,6 @@ function love.draw()
         love.graphics.print("Last Score: " .. lastScore, 50, 200)
     end
     love.graphics.print("Total Score: " .. totalScore, 50, 220)
-
     love.graphics.print("Tries Left: " .. triesLeft, 50, 250)
     love.graphics.print("Multiplier: " .. multiplier, 50, 270)
     love.graphics.print("Target Score: " .. targetScore, 50, 290)
@@ -228,4 +241,3 @@ function serveDrink()
         drink[attr] = 0
     end
 end
-
