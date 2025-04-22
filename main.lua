@@ -55,7 +55,7 @@ function love.load()
     gameCanvas = love.graphics.newCanvas(1600, 900)  -- your actual game resolution
 
     clickSound = love.audio.newSource("card.ogg", "static")
-
+    pourSound = love.audio.newSource("pour-drink-trimmed.mp3", "static")
     font = love.graphics.newFont("dogica.ttf", 20) -- 20 is the font size
     love.graphics.setFont(font)
 
@@ -205,7 +205,7 @@ function love.mousepressed(x, y, button)
 
         if canServe() and isInside(x, y, serveButton) then
             serveDrink()
-            love.audio.play(clickSound)
+            love.audio.play(pourSound)
 
         end
     end
