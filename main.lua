@@ -1,5 +1,12 @@
+local crtShader
+local canvas
+local startTime = love.timer.getTime()
+local gameCanvas
+
 Drink = {}
 Drink.__index = Drink
+
+
 
 function Drink:new(saltiness, bitterness, sweetness, sourness)
     local obj = {
@@ -42,6 +49,16 @@ end
 
 
 function love.load()
+
+    crtShader = love.graphics.newShader("crt.glsl")
+    -- canvas = love.graphics.newCanvas(love.graphics.getWidth(), love.graphics.getHeight())
+    gameCanvas = love.graphics.newCanvas(1600, 900)  -- your actual game resolution
+
+    clickSound = love.audio.newSource("card.ogg", "static")
+
+    font = love.graphics.newFont("dogica.ttf", 20) -- 20 is the font size
+    love.graphics.setFont(font)
+
     love.window.setMode(1600, 900)
 
     images = {
@@ -84,7 +101,7 @@ function love.load()
             table.insert(buttons, {
                 x = btnColX,
                 y = btnY,
-                width = buttonWidth,
+                width = buttonWidth + 50,
                 height = buttonHeight,
                 attribute = attr,
                 value = val
@@ -111,16 +128,17 @@ totalScore = 0
 targetScore = 60 -- Minimum score needed to pass (you can adjust this)
 triesLeft = 4
 multiplier = 1
-
+level = 1
 
 function love.update(dt)
 end
 
-
 function love.draw()
-    love.graphics.clear(0.2,0.3,0.4)
+    -- Step 1: Draw your game to gameCanvas (1600x900)
+    love.graphics.setCanvas(gameCanvas)
+    love.graphics.clear(0.2, 0.3, 0.4)
 
-    -- Draw attribute images side by side with button columns to the right
+    -- Your existing game draw code
     local imageScale = 0.5
     for i, attr in ipairs(attributes) do
         local img = images[attr]
@@ -128,13 +146,14 @@ function love.draw()
         love.graphics.draw(img, pos.x, pos.y, 0, imageScale, imageScale)
     end
 
-    -- Draw buttons in columns next to each image
+    local valueLabels = { [1] = "Low", [2] = "Medium", [3] = "High" }
+
     for _, button in ipairs(buttons) do
         love.graphics.rectangle("line", button.x, button.y, button.width, button.height)
-        love.graphics.printf(button.value, button.x, button.y + 10, button.width, "center")
+        local label = valueLabels[button.value] or tostring(button.value)
+        love.graphics.printf(label, button.x, button.y + 10, button.width, "center")
     end
 
-    -- Draw Current Drink using attributes (fixed order)
     love.graphics.print("Current Drink:", 50, 30)
     local offsetY = 50
     for i, attr in ipairs(attributes) do
@@ -142,32 +161,52 @@ function love.draw()
         offsetY = offsetY + 20
     end
 
-    -- Draw Serve button
     if canServe() then
         love.graphics.rectangle("line", serveButton.x, serveButton.y, serveButton.width, serveButton.height)
         love.graphics.printf(serveButton.label, serveButton.x, serveButton.y + 10, serveButton.width, "center")
     end
 
-    -- Draw last score
+    love.graphics.print("Level: " .. level, 50, 170)
     if lastScore ~= nil then
-        love.graphics.print("Last Score: " .. lastScore, 50, 200)
+        love.graphics.print("Last Score: " .. lastScore, 50, 470)
     end
-    love.graphics.print("Total Score: " .. totalScore, 50, 220)
-    love.graphics.print("Tries Left: " .. triesLeft, 50, 250)
-    love.graphics.print("Multiplier: " .. multiplier, 50, 270)
-    love.graphics.print("Target Score: " .. targetScore, 50, 290)
+    love.graphics.print("Total Score: " .. totalScore, 50, 500)
+    love.graphics.print("Tries Left: " .. triesLeft, 50, 530)
+    love.graphics.print("Multiplier: " .. multiplier, 50, 560)
+    love.graphics.print("Target Score: " .. targetScore, 50, 590)
+
+    -- Step 2: End drawing to gameCanvas
+    love.graphics.setCanvas()
+
+    -- Step 3: Apply shader to stretch gameCanvas fullscreen
+    crtShader:send("millis", love.timer.getTime() - startTime)
+    crtShader:send("resolution", { love.graphics.getWidth(), love.graphics.getHeight() })
+    love.graphics.setShader(crtShader)
+
+    -- Stretch gameCanvas to fill window size
+    local scaleX = love.graphics.getWidth() / gameCanvas:getWidth()
+    local scaleY = love.graphics.getHeight() / gameCanvas:getHeight()
+    love.graphics.draw(gameCanvas, 0, 0, 0, scaleX, scaleY)
+
+    love.graphics.setShader()
 end
 
+
 function love.mousepressed(x, y, button)
+
     if button == 1 then -- left mouse button
         for _, btn in ipairs(buttons) do
             if isInside(x, y, btn) then
                 drink[btn.attribute] = btn.value
+                love.audio.play(clickSound)
+
             end
         end
 
         if canServe() and isInside(x, y, serveButton) then
             serveDrink()
+            love.audio.play(clickSound)
+
         end
     end
 end
@@ -224,6 +263,15 @@ function serveDrink()
         targetDrink = generateRandomTarget()
         triesLeft = 4 -- Reset tries
         multiplier = multiplier - 1
+        lastScore = 0
+        totalScore = 0
+
+        level = level + 1
+        targetScore = 60 + (level - 1) * 30 -- Starting from 60, increase by 10 per level
+        print("Level Up! Now at level " .. level)
+        print("New Target Score: " .. targetScore)
+
+
     else
         triesLeft = triesLeft - 1
         if triesLeft == 0 then
